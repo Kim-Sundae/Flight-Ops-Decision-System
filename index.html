@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Flight Ops Decision System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#0E1117;--surface:#161B25;--surface2:#1E2533;
+    --border:#2A3244;--border2:#3A4560;
+    --text:#E8ECF4;--text2:#8A96B0;--text3:#5A6480;
+    --green:#2ECC71;--green-bg:rgba(46,204,113,0.08);--green-border:rgba(46,204,113,0.3);--green-glow:rgba(46,204,113,0.15);
+    --yellow:#F39C12;--yellow-bg:rgba(243,156,18,0.08);--yellow-border:rgba(243,156,18,0.3);--yellow-glow:rgba(243,156,18,0.15);
+    --red:#E74C3C;--red-bg:rgba(231,76,60,0.08);--red-border:rgba(231,76,60,0.3);--red-glow:rgba(231,76,60,0.15);
+    --accent:#4A7CF7;--purple:#7B5CF7;--radius:10px;--radius-sm:6px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+
+  /* TOPBAR */
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-mark{width:32px;height:32px;background:linear-gradient(135deg,#4A7CF7,#7B5CF7);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+  .logo-text{font-size:14px;font-weight:600;}
+  .logo-sub{font-size:10px;color:var(--text3);font-family:'JetBrains Mono';margin-top:1px;}
+  .badge-live{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green);font-family:'JetBrains Mono';}
+  .live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+  /* TABS */
+  .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--surface);padding:0 20px;}
+  .tab{padding:12px 16px;font-size:13px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all 0.15s;font-weight:500;}
+  .tab:hover{color:var(--text2);}
+  .tab.active{color:var(--text);border-bottom-color:var(--accent);}
+
+  .main{max-width:700px;margin:0 auto;padding:24px 20px 100px;}
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
+
+  /* SETUP */
+  .setup-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:20px;}
+  .setup-top{display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+  .setup-title-txt{font-size:12px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:8px;}
+  .chevron{font-size:11px;color:var(--text3);transition:transform 0.2s;}
+  .chevron.open{transform:rotate(180deg);}
+  .setup-body{display:none;margin-top:14px;}
+  .setup-body.open{display:block;}
+  .setup-desc{font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6;}
+  .setup-code{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:10.5px;font-family:'JetBrains Mono';color:var(--text2);white-space:pre;overflow-x:auto;margin-bottom:12px;line-height:1.7;}
+  .field{margin-bottom:8px;}
+  .field label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;}
+  .field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:7px 10px;font-family:'Inter';}
+  .field input:focus{outline:none;border-color:var(--accent);}
+  .field input::placeholder{color:var(--text3);}
+  .btn-connect{padding:7px 14px;font-size:12px;font-weight:600;border-radius:var(--radius-sm);border:none;background:var(--accent);color:#fff;cursor:pointer;}
+  .btn-connect:hover{background:#5A8CF7;}
+  .setup-status{font-size:11px;margin-top:8px;}
+  .setup-status.ok{color:var(--green);}
+  .setup-status.fail{color:var(--red);}
+  .connected-pill{font-size:10px;padding:2px 8px;border-radius:20px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);display:none;}
+
+  /* MISSION */
+  .section-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono';margin-bottom:10px;}
+  .mission-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;}
+  .mission-fields{display:flex;gap:10px;flex-wrap:wrap;}
+  .mf{flex:1;min-width:130px;}
+  .mf label{display:block;font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.06em;}
+  .mf select,.mf input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:8px 10px;font-family:'Inter';cursor:pointer;}
+  .mf select:focus,.mf input:focus{outline:none;border-color:var(--accent);}
+  .mf select option{background:var(--surface2);}
+
+  /* MODULE CARDS */
+  .modules-grid{display:grid;gap:10px;margin-bottom:16px;}
+  .module-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all 0.2s;}
+  .module-card.state-green{border-color:var(--green-border);border-left-color:var(--green);box-shadow:0 0 20px var(--green-glow);}
+  .module-card.state-yellow{border-color:var(--yellow-border);border-left-color:var(--yellow);box-shadow:0 0 20px var(--yellow-glow);}
+  .module-card.state-red{border-color:var(--red-border);border-left-color:var(--red);box-shadow:0 0 20px var(--red-glow);}
+  .module-top{display:flex;align-items:center;padding:12px 16px;gap:12px;}
+  .module-icon{width:34px;height:34px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+  .module-info{flex:1;}
+  .module-name{font-size:13px;font-weight:600;}
+  .module-scope{font-size:10px;color:var(--text3);margin-top:1px;}
+  .sig-group{display:flex;gap:6px;}
+  .sig-btn{width:38px;height:38px;border-radius:50%;border:1.5px solid var(--border2);background:var(--surface2);cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+  .sig-btn:hover{transform:scale(1.1);}
+  .sig-btn.active-green{background:var(--green-bg);border-color:var(--green);box-shadow:0 0 10px var(--green-glow);}
+  .sig-btn.active-yellow{background:var(--yellow-bg);border-color:var(--yellow);box-shadow:0 0 10px var(--yellow-glow);}
+  .sig-btn.active-red{background:var(--red-bg);border-color:var(--red);box-shadow:0 0 10px var(--red-glow);}
+
+  /* MODULE BOTTOM */
+  .module-bottom{padding:0 16px 14px;display:grid;gap:8px;}
+  .mod-name-row{display:flex;align-items:center;gap:8px;}
+  .mod-name-label{font-size:10px;color:var(--text3);white-space:nowrap;min-width:64px;}
+  .mod-name-select{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:5px 8px;font-family:'Inter';cursor:pointer;}
+  .mod-name-select:focus{outline:none;border-color:var(--accent);}
+  .mod-name-select option{background:var(--surface2);}
+  .mod-comment{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:6px 10px;resize:none;font-family:'Inter';line-height:1.5;}
+  .mod-comment:focus{outline:none;border-color:var(--border2);}
+  .mod-comment::placeholder{color:var(--text3);}
+
+  /* STATUS */
+  .status-indicator{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:14px;transition:all 0.3s;}
+  .status-indicator.st-green{border-color:var(--green-border);background:var(--green-bg);}
+  .status-indicator.st-yellow{border-color:var(--yellow-border);background:var(--yellow-bg);}
+  .status-indicator.st-red{border-color:var(--red-border);background:var(--red-bg);}
+  .status-orb{width:44px;height:44px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all 0.3s;}
+  .status-orb.orb-green{background:var(--green-bg);border-color:var(--green);box-shadow:0 0 18px var(--green-glow);}
+  .status-orb.orb-yellow{background:var(--yellow-bg);border-color:var(--yellow);box-shadow:0 0 18px var(--yellow-glow);}
+  .status-orb.orb-red{background:var(--red-bg);border-color:var(--red);box-shadow:0 0 18px var(--red-glow);}
+  .status-text-main{font-size:14px;font-weight:600;}
+  .status-text-sub{font-size:11px;color:var(--text2);margin-top:3px;}
+
+  /* DUTY MANAGER */
+  .dm-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;}
+  .dm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .dm-title{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}
+  .dm-badge{font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(123,92,247,0.1);color:var(--purple);border:1px solid rgba(123,92,247,0.3);font-weight:600;}
+  .dm-optional{font-size:10px;color:var(--text3);}
+  .dm-fields{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .dm-field{flex:1;min-width:140px;}
+  .dm-field label{display:block;font-size:10px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em;}
+  .dm-field select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;padding:8px 10px;font-family:'Inter';cursor:pointer;}
+  .dm-field select:focus{outline:none;border-color:var(--purple);}
+  .dm-field select option{background:var(--surface2);}
+  .dm-approval-row{display:flex;gap:8px;align-items:center;}
+  .btn-approve{flex:1;padding:9px;font-size:12px;font-weight:600;border-radius:var(--radius-sm);border:1px solid rgba(123,92,247,0.4);background:rgba(123,92,247,0.1);color:var(--purple);cursor:pointer;transition:all 0.15s;}
+  .btn-approve:hover{background:rgba(123,92,247,0.2);}
+  .btn-approve.approved{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+  .btn-skip{padding:9px 14px;font-size:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;}
+  .btn-skip:hover{background:var(--surface2);}
+  .dm-status{font-size:11px;margin-top:8px;}
+  .dm-status.approved{color:var(--green);}
+  .dm-status.skipped{color:var(--text3);}
+
+  /* ACTIONS */
+  .action-row{display:flex;gap:8px;margin-bottom:12px;}
+  .btn-primary{flex:1;padding:11px;font-size:13px;font-weight:600;border-radius:var(--radius);border:none;background:var(--accent);color:#fff;cursor:pointer;transition:all 0.15s;}
+  .btn-primary:hover{background:#5A8CF7;transform:translateY(-1px);}
+  .btn-ghost{padding:11px 16px;font-size:13px;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:all 0.15s;}
+  .btn-ghost:hover{background:var(--surface);color:var(--text);}
+  .btn-csv{width:100%;padding:9px;font-size:12px;font-weight:500;border-radius:var(--radius);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+  .btn-csv:hover{background:var(--surface);color:var(--text);}
+
+  /* LOG */
+  .log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .log-title-txt{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono';}
+  .log-actions{display:flex;gap:6px;}
+  .btn-sm{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;}
+  .btn-sm:hover{color:var(--text2);}
+  .log-empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;border:1px dashed var(--border);border-radius:var(--radius);}
+  .log-entry{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;transition:border-color 0.2s;}
+  .log-entry:hover{border-color:var(--border2);}
+  .log-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;}
+  .log-aircraft{font-size:13px;font-weight:700;color:var(--text);}
+  .log-req{font-size:12px;color:var(--text2);margin-top:2px;}
+  .log-time{font-size:10px;color:var(--text3);font-family:'JetBrains Mono';flex-shrink:0;margin-top:2px;}
+  .log-pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+  .pill{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:500;}
+  .pill.green{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+  .pill.yellow{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);}
+  .pill.red{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+  .log-bottom{display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border);}
+  .log-final{font-size:12px;font-weight:600;}
+  .log-final.green{color:var(--green);}
+  .log-final.yellow{color:var(--yellow);}
+  .log-final.red{color:var(--red);}
+  .log-dm{font-size:10px;color:var(--purple);margin-top:3px;}
+  .log-sheet{font-size:10px;font-family:'JetBrains Mono';}
+  .log-sheet.ok{color:var(--green);}
+  .log-sheet.fail{color:var(--red);}
+  .btn-copy-one{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;}
+  .btn-copy-one:hover{color:var(--text2);}
+  .btn-copy-one.copied{color:var(--green);border-color:var(--green-border);}
+
+  /* TOAST */
+  #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);font-size:13px;font-weight:600;padding:12px 22px;border-radius:99px;box-shadow:0 4px 24px rgba(0,0,0,0.4);z-index:9999;white-space:nowrap;opacity:0;transition:all 0.3s ease;font-family:'Inter',sans-serif;pointer-events:none;}
+
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+  @media(max-width:480px){.main{padding:16px 14px 100px;}.mission-fields{flex-direction:column;}.dm-fields{flex-direction:column;}.tabs{padding:0 14px;}.tab{padding:10px 12px;font-size:12px;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-mark">✈</div>
+    <div>
+      <div class="logo-text">Flight Ops Decision System</div>
+      <div class="logo-sub">GO / NO-GO · SIGNAL BOARD</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span class="connected-pill" id="connectedPill">● Sheet Connected</span>
+    <div class="badge-live"><div class="live-dot"></div>LIVE</div>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('decision')">Decision Input</div>
+  <div class="tab" onclick="switchTab('log')">Records <span id="logCount" style="font-size:10px;margin-left:3px;"></span></div>
+</div>
+
+<div class="main">
+
+  <!-- DECISION TAB -->
+  <div id="tab-decision" class="tab-content active">
+
+    <!-- GOOGLE SHEET SETUP -->
+    <div class="setup-card">
+      <div class="setup-top" onclick="toggleSetup()">
+        <div class="setup-title-txt">⚙ Google Sheets Integration <span id="setupStatusLabel" style="font-size:10px;color:var(--text3);margin-left:6px;">— click to configure</span></div>
+        <div class="chevron" id="chevron">▼</div>
+      </div>
+      <div class="setup-body" id="setupBody">
+        <div class="setup-desc">Paste the code below into Apps Script, deploy as a Web App (access: Anyone), then enter the URL here.</div>
+        <div class="setup-code">function doPost(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const d = JSON.parse(e.postData.contents);
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'Timestamp','Aircraft','Request',
+      'Dispatcher','Dispatcher Name','Dispatcher Comment',
+      'Flight Crew','Crew Name','Crew Comment',
+      'Maintenance','MX Name','MX Comment',
+      'Cabin','Cabin Name','Cabin Comment',
+      'Duty Manager','DM Approval','Final Decision'
+    ]);
+  }
+  sheet.appendRow([
+    d.time, d.tailNo, d.reqDesc,
+    d.ops, d.opsName, d.opsC,
+    d.crew, d.crewName, d.crewC,
+    d.mx, d.mxName, d.mxC,
+    d.cabin, d.cabinName, d.cabinC,
+    d.dmName, d.dmApproval, d.final
+  ]);
+  return ContentService
+    .createTextOutput(JSON.stringify({result:'ok'}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</div>
+        <div class="field">
+          <label>Apps Script Deployment URL</label>
+          <input type="text" id="sheetUrl" placeholder="https://script.google.com/macros/s/..." />
+        </div>
+        <button class="btn-connect" onclick="connectSheet()">Connect & Test</button>
+        <div class="setup-status" id="setupStatus"></div>
+      </div>
+    </div>
+
+    <!-- MISSION INFO -->
+    <div class="mission-card">
+      <div class="section-label">Mission Info</div>
+      <div class="mission-fields">
+        <div class="mf">
+          <label>Aircraft</label>
+          <select id="tailNo">
+            <option value="" disabled selected>Select</option>
+            <option value="HL8080">HL8080</option>
+            <option value="HL8372">HL8372</option>
+          </select>
+        </div>
+        <div class="mf" style="flex:2">
+          <label>Request / Situation</label>
+          <input type="text" id="reqDesc" placeholder="e.g. 2-hour early departure request" />
+        </div>
+      </div>
+    </div>
+
+    <!-- MODULES -->
+    <div class="modules-grid" id="modulesGrid"></div>
+
+    <!-- STATUS -->
+    <div class="status-indicator" id="statusBox">
+      <div class="status-orb" id="statusOrb">—</div>
+      <div>
+        <div class="status-text-main" id="statusMain">Awaiting module responses</div>
+        <div class="status-text-sub" id="statusSub">Each module: review constraints and select a signal</div>
+      </div>
+    </div>
+
+    <!-- DUTY MANAGER -->
+    <div class="dm-card">
+      <div class="dm-header">
+        <div class="dm-title">
+          <span>👔</span> Duty Manager Approval
+          <span class="dm-badge">OPTIONAL</span>
+        </div>
+        <span class="dm-optional">Can proceed without DM approval</span>
+      </div>
+      <div class="dm-fields">
+        <div class="dm-field">
+          <label>Duty Manager</label>
+          <select id="dmName">
+            <option value="">— Not assigned —</option>
+            <option value="차승수">차승수</option>
+            <option value="이병우">이병우</option>
+          </select>
+        </div>
+        <div class="dm-field">
+          <label>Comment (optional)</label>
+          <input type="text" id="dmComment" placeholder="DM remarks..." style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;padding:8px 10px;font-family:'Inter';width:100%;" />
+        </div>
+      </div>
+      <div class="dm-approval-row">
+        <button class="btn-approve" id="approveBtn" onclick="toggleDmApproval()">✓ Mark as Approved</button>
+        <button class="btn-skip" onclick="skipDm()">Proceed without DM</button>
+      </div>
+      <div class="dm-status" id="dmStatus"></div>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="action-row">
+      <button class="btn-primary" id="submitBtn" onclick="submitDecision()">Save Record</button>
+      <button class="btn-ghost" onclick="resetAll()">Reset</button>
+    </div>
+    <button class="btn-csv" onclick="downloadCSV()">⬇ Download All Records as CSV</button>
+
+  </div>
+
+  <!-- LOG TAB -->
+  <div id="tab-log" class="tab-content">
+    <div class="log-header">
+      <span class="log-title-txt">Decision Records</span>
+      <div class="log-actions">
+        <button class="btn-sm" onclick="downloadCSV()">⬇ CSV</button>
+        <button class="btn-sm" onclick="copyAllLog()">Copy All</button>
+      </div>
+    </div>
+    <div id="logList"><div class="log-empty">No records saved yet</div></div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────
+const MODS = [
+  {
+    id:'ops', name:'Dispatcher', icon:'🗺',
+    scope:'Slot · Permit · Weather · Flight Plan · Ground Handling',
+    members:['나병철','유성범','김선대','정은재']
+  },
+  {
+    id:'crew', name:'Flight Crew', icon:'👨‍✈️',
+    scope:'Duty Time · Fatigue · Readiness',
+    members:['이원규','송우섭','김원진','박재목','박종석','Veerraj','Cedric','Oscar']
+  },
+  {
+    id:'mx', name:'Maintenance', icon:'🔧',
+    scope:'Aircraft Status & Readiness',
+    members:['김형원','공현철','김현태','신재훈','김규정','김용두','이창우']
+  },
+  {
+    id:'cabin', name:'Cabin', icon:'🍽',
+    scope:'Catering Preparation & Readiness',
+    members:['Kanako','Ana','이주영','이선경','이수경','윤혜원']
+  },
+];
+
+const SIG = {
+  green:  {e:'🟢', label:'Green',  cls:'active-green',  txt:'No issues'},
+  yellow: {e:'🟡', label:'Yellow', cls:'active-yellow', txt:'Conditional'},
+  red:    {e:'🔴', label:'Red',    cls:'active-red',    txt:'Not feasible'},
+};
+
+const state = {};
+MODS.forEach(m => { state[m.id] = {signal:null, name:'', comment:''}; });
+const logEntries = [];
+let sheetUrl = localStorage.getItem('fods_sheet_url') || '';
+let dmApproved = false;
+let dmSkipped = false;
+let prevAllDone = false;
+
+// ─── SETUP ───────────────────────────────────────────────────
+function toggleSetup() {
+  const b = document.getElementById('setupBody');
+  const c = document.getElementById('chevron');
+  const open = b.classList.toggle('open');
+  c.classList.toggle('open', open);
+  if (open && sheetUrl) document.getElementById('sheetUrl').value = sheetUrl;
+}
+
+async function connectSheet() {
+  const url = document.getElementById('sheetUrl').value.trim();
+  const st = document.getElementById('setupStatus');
+  if (!url.startsWith('https://script.google.com')) {
+    st.textContent = '✗ Invalid URL'; st.className = 'setup-status fail'; return;
+  }
+  st.textContent = 'Testing...'; st.className = 'setup-status';
+  try {
+    const res = await fetch(url, {method:'POST', body:JSON.stringify({
+      time:'TEST', tailNo:'TEST', reqDesc:'Connection test',
+      ops:'—',opsName:'',opsC:'', crew:'—',crewName:'',crewC:'',
+      mx:'—',mxName:'',mxC:'', cabin:'—',cabinName:'',cabinC:'',
+      dmName:'',dmApproval:'',final:'TEST'
+    })});
+    const d = await res.json();
+    if (d.result === 'ok') {
+      sheetUrl = url;
+      localStorage.setItem('fods_sheet_url', url);
+      st.textContent = '✓ Connected — records auto-save to Google Sheets';
+      st.className = 'setup-status ok';
+      document.getElementById('setupStatusLabel').textContent = '— ✓ Connected';
+      document.getElementById('setupStatusLabel').style.color = 'var(--green)';
+      document.getElementById('connectedPill').style.display = 'flex';
+    } else throw new Error('Server error');
+  } catch(e) {
+    st.textContent = '✗ Failed: ' + e.message; st.className = 'setup-status fail';
+  }
+}
+
+// ─── TABS ────────────────────────────────────────────────────
+function switchTab(name) {
+  ['decision','log'].forEach(n => {
+    document.getElementById('tab-'+n).classList.toggle('active', n===name);
+  });
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', ['decision','log'][i]===name));
+}
+
+// ─── MODULES ─────────────────────────────────────────────────
+function renderModules() {
+  document.getElementById('modulesGrid').innerHTML = MODS.map(m => `
+    <div class="module-card" id="card-${m.id}">
+      <div class="module-top">
+        <div class="module-icon">${m.icon}</div>
+        <div class="module-info">
+          <div class="module-name">${m.name}</div>
+          <div class="module-scope">${m.scope}</div>
+        </div>
+        <div class="sig-group">
+          ${['green','yellow','red'].map(s => `
+            <button class="sig-btn" id="btn-${m.id}-${s}"
+              onclick="setSignal('${m.id}','${s}')"
+              title="${SIG[s].label}: ${SIG[s].txt}"
+              aria-label="${m.name} ${SIG[s].label}">${SIG[s].e}</button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="module-bottom">
+        <div class="mod-name-row">
+          <span class="mod-name-label">Checked by</span>
+          <select class="mod-name-select" id="name-${m.id}" onchange="state['${m.id}'].name=this.value">
+            <option value="">— Select name —</option>
+            ${m.members.map(n => `<option value="${n}">${n}</option>`).join('')}
+          </select>
+        </div>
+        <textarea class="mod-comment" id="comment-${m.id}" rows="2"
+          placeholder="Remarks / constraints (optional)"
+          oninput="state['${m.id}'].comment=this.value"></textarea>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setSignal(modId, sig) {
+  state[modId].signal = sig;
+  ['green','yellow','red'].forEach(s => {
+    document.getElementById(`btn-${modId}-${s}`).className = 'sig-btn' + (s===sig ? ' '+SIG[s].cls : '');
+  });
+  document.getElementById('card-'+modId).className = 'module-card state-'+sig;
+  updateStatus();
+}
+
+// ─── STATUS ──────────────────────────────────────────────────
+function updateStatus() {
+  const sigs = MODS.map(m => state[m.id].signal);
+  const pending = MODS.filter(m => !state[m.id].signal).map(m => m.name);
+  const box  = document.getElementById('statusBox');
+  const orb  = document.getElementById('statusOrb');
+  const main = document.getElementById('statusMain');
+  const sub  = document.getElementById('statusSub');
+  box.className = 'status-indicator';
+  orb.className = 'status-orb';
+  const allDone = pending.length === 0;
+
+  if (sigs.includes('red')) {
+    box.classList.add('st-red'); orb.classList.add('orb-red'); orb.textContent='🔴';
+    main.textContent = 'NO-GO (Red)';
+    sub.textContent = MODS.filter(m=>state[m.id].signal==='red').map(m=>m.name).join(', ') + ' — check remarks';
+    if (!prevAllDone && allDone) showToast('🔴 NO-GO — Check red modules.', 'red');
+  } else if (!allDone) {
+    orb.textContent = '—';
+    main.textContent = 'Awaiting responses';
+    sub.textContent = pending.join(' · ') + ' — response required';
+  } else if (sigs.includes('yellow')) {
+    box.classList.add('st-yellow'); orb.classList.add('orb-yellow'); orb.textContent='🟡';
+    main.textContent = 'Conditional — further review required';
+    sub.textContent = MODS.filter(m=>state[m.id].signal==='yellow').map(m=>m.name).join(', ') + ' — resolve before proceeding';
+    if (!prevAllDone && allDone) showToast('🟡 All responded — Conditional. Check yellow items.', 'yellow');
+  } else {
+    box.classList.add('st-green'); orb.classList.add('orb-green'); orb.textContent='🟢';
+    main.textContent = 'GO — All Clear';
+    sub.textContent = 'All modules cleared — Flight Dispatcher final approval';
+    if (!prevAllDone && allDone) showToast('🟢 All modules cleared — GO!', 'green');
+  }
+  prevAllDone = allDone;
+}
+
+// ─── DUTY MANAGER ────────────────────────────────────────────
+function toggleDmApproval() {
+  dmApproved = !dmApproved;
+  dmSkipped = false;
+  const btn = document.getElementById('approveBtn');
+  const st  = document.getElementById('dmStatus');
+  const dmName = document.getElementById('dmName').value;
+  if (dmApproved) {
+    btn.textContent = '✓ Approved';
+    btn.classList.add('approved');
+    st.textContent = dmName ? `✓ Approved by ${dmName}` : '✓ DM Approved';
+    st.className = 'dm-status approved';
+  } else {
+    btn.textContent = '✓ Mark as Approved';
+    btn.classList.remove('approved');
+    st.textContent = '';
+    st.className = 'dm-status';
+  }
+}
+
+function skipDm() {
+  dmSkipped = true;
+  dmApproved = false;
+  document.getElementById('approveBtn').classList.remove('approved');
+  document.getElementById('approveBtn').textContent = '✓ Mark as Approved';
+  const st = document.getElementById('dmStatus');
+  st.textContent = '— Proceeding without DM approval';
+  st.className = 'dm-status skipped';
+}
+
+// ─── SUBMIT ──────────────────────────────────────────────────
+function entryToText(e) {
+  const fmap = {green:'✅ GO — No issues', yellow:'⚠️ Conditional', red:'🚫 NO-GO — Not feasible'};
+  const dmLine = e.dmName
+    ? (e.dmApproval === 'Approved' ? `\n👔 DM: ${e.dmName} — Approved${e.dmComment ? ' (' + e.dmComment + ')' : ''}` : `\n👔 DM: ${e.dmName} — Not approved`)
+    : '\n👔 DM: Not assigned';
+  return `✈️ Flight Ops Decision Record\n` +
+    `───────────────────────────\n` +
+    `🕐 ${e.time}\n` +
+    `Aircraft: ${e.tailNo}  |  Request: ${e.reqDesc}\n\n` +
+    `[Module Signals]\n` +
+    e.mods.map(m => `${SIG[m.signal].e} ${m.name}${m.checkedBy ? ' ('+m.checkedBy+')' : ''}${m.comment ? ' — '+m.comment : ''}`).join('\n') +
+    dmLine +
+    `\n───────────────────────────\n` +
+    `Decision: ${fmap[e.final]}`;
+}
+
+async function submitDecision() {
+  const pending = MODS.filter(m => !state[m.id].signal);
+  if (pending.length > 0) {
+    alert('Missing responses from:\n' + pending.map(m=>m.name).join(', ')); return;
+  }
+  const sigs = MODS.map(m => state[m.id].signal);
+  const final = sigs.includes('red') ? 'red' : sigs.includes('yellow') ? 'yellow' : 'green';
+  const dmName = document.getElementById('dmName').value;
+  const dmComment = document.getElementById('dmComment').value.trim();
+  const dmApprovalStr = dmApproved ? 'Approved' : (dmSkipped ? 'Skipped' : 'Pending');
+
+  const entry = {
+    id: logEntries.length + 1,
+    time: new Date().toLocaleString('en-GB', {hour12:false}),
+    tailNo: document.getElementById('tailNo').value || '—',
+    reqDesc: document.getElementById('reqDesc').value || '—',
+    final,
+    dmName, dmComment, dmApproval: dmApprovalStr,
+    mods: MODS.map(m => ({
+      ...m,
+      signal: state[m.id].signal,
+      checkedBy: state[m.id].name,
+      comment: state[m.id].comment
+    }))
+  };
+  logEntries.unshift(entry);
+  renderLog();
+  updateLogCount();
+  navigator.clipboard.writeText(entryToText(entry)).catch(()=>{});
+
+  const btn = document.getElementById('submitBtn');
+  btn.textContent = 'Saving...'; btn.style.background = '#2A3244';
+
+  if (sheetUrl) {
+    const payload = {
+      time:entry.time, tailNo:entry.tailNo, reqDesc:entry.reqDesc,
+      ops:SIG[state.ops.signal].label,   opsName:state.ops.name,   opsC:state.ops.comment,
+      crew:SIG[state.crew.signal].label, crewName:state.crew.name, crewC:state.crew.comment,
+      mx:SIG[state.mx.signal].label,     mxName:state.mx.name,     mxC:state.mx.comment,
+      cabin:SIG[state.cabin.signal].label, cabinName:state.cabin.name, cabinC:state.cabin.comment,
+      dmName, dmApproval:dmApprovalStr, final:SIG[final].label
+    };
+    try {
+      const res = await fetch(sheetUrl, {method:'POST', body:JSON.stringify(payload)});
+      const d = await res.json();
+      const ok = d.result === 'ok';
+      const el = document.getElementById('sheetstatus-'+entry.id);
+      if (el) { el.textContent = ok ? '✓ Saved to Sheet' : '✗ Sheet error'; el.className = 'log-sheet '+(ok?'ok':'fail'); }
+      btn.textContent = ok ? '✓ Saved to Sheet' : '✓ Saved locally';
+      btn.style.background = ok ? '#27AE60' : '#E67E22';
+    } catch {
+      btn.textContent = '✓ Saved locally'; btn.style.background = '#E67E22';
+    }
+  } else {
+    btn.textContent = '✓ Copied to clipboard'; btn.style.background = '#27AE60';
+  }
+  setTimeout(()=>{ btn.textContent='Save Record'; btn.style.background=''; }, 3000);
+}
+
+// ─── LOG ─────────────────────────────────────────────────────
+function renderLog() {
+  const el = document.getElementById('logList');
+  if (!logEntries.length) { el.innerHTML='<div class="log-empty">No records saved yet</div>'; return; }
+  const fmap = {green:'🟢 Green — GO', yellow:'🟡 Yellow — Conditional', red:'🔴 Red — NO-GO'};
+  el.innerHTML = logEntries.map(e => `
+    <div class="log-entry">
+      <div class="log-top">
+        <div>
+          <div class="log-aircraft">${e.tailNo}</div>
+          <div class="log-req">${e.reqDesc}</div>
+        </div>
+        <div class="log-time">${e.time}</div>
+      </div>
+      <div class="log-pills">
+        ${e.mods.map(m => `<span class="pill ${m.signal}">${m.name} ${SIG[m.signal].e}${m.checkedBy ? ' · '+m.checkedBy : ''}${m.comment ? ' — '+m.comment : ''}</span>`).join('')}
+      </div>
+      <div class="log-bottom">
+        <div>
+          <div class="log-final ${e.final}">${fmap[e.final]}</div>
+          ${e.dmName ? `<div class="log-dm">👔 DM: ${e.dmName} — ${e.dmApproval}${e.dmComment ? ' ('+e.dmComment+')' : ''}</div>` : ''}
+          <div class="log-sheet" id="sheetstatus-${e.id}"></div>
+        </div>
+        <button class="btn-copy-one" id="cpbtn-${e.id}" onclick="copyOne(${e.id})">Copy</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyOne(id) {
+  const e = logEntries.find(e=>e.id===id);
+  if (!e) return;
+  navigator.clipboard.writeText(entryToText(e)).then(()=>{
+    const btn = document.getElementById('cpbtn-'+id);
+    btn.textContent='Copied ✓'; btn.classList.add('copied');
+    setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function copyAllLog() {
+  if (!logEntries.length) { alert('No records to copy'); return; }
+  const txt = [...logEntries].reverse().map(e=>entryToText(e)).join('\n\n'+'='.repeat(28)+'\n\n');
+  navigator.clipboard.writeText(txt).then(()=>alert('All records copied'));
+}
+
+function downloadCSV() {
+  if (!logEntries.length) { alert('No records to export'); return; }
+  const headers = [
+    'ID','Timestamp','Aircraft','Request',
+    'Dispatcher Signal','Dispatcher Name','Dispatcher Comment',
+    'Crew Signal','Crew Name','Crew Comment',
+    'MX Signal','MX Name','MX Comment',
+    'Cabin Signal','Cabin Name','Cabin Comment',
+    'DM Name','DM Approval','Final Decision'
+  ];
+  const rows = [...logEntries].reverse().map(e => [
+    e.id, e.time, e.tailNo, e.reqDesc,
+    ...e.mods.flatMap(m => [SIG[m.signal].label, m.checkedBy||'', m.comment||'']),
+    e.dmName||'', e.dmApproval||'', SIG[e.final].label
+  ]);
+  const csv = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ops-decision-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function updateLogCount() {
+  document.getElementById('logCount').textContent = logEntries.length > 0 ? `(${logEntries.length})` : '';
+}
+
+// ─── TOAST ───────────────────────────────────────────────────
+function showToast(msg, type) {
+  const c = {
+    green: ['var(--green-bg)','var(--green-border)','var(--green)'],
+    yellow:['var(--yellow-bg)','var(--yellow-border)','var(--yellow)'],
+    red:   ['var(--red-bg)','var(--red-border)','var(--red)']
+  }[type];
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.cssText += `background:${c[0]};border:1px solid ${c[1]};color:${c[2]};`;
+  t.style.opacity = '0'; t.style.transform = 'translateX(-50%) translateY(20px)';
+  requestAnimationFrame(()=>{ t.style.opacity='1'; t.style.transform='translateX(-50%) translateY(0)'; });
+  setTimeout(()=>{ t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(10px)'; }, 5000);
+}
+
+// ─── RESET ───────────────────────────────────────────────────
+function resetAll() {
+  if (!confirm('Reset all inputs?')) return;
+  MODS.forEach(m => { state[m.id]={signal:null, name:'', comment:''}; });
+  document.getElementById('tailNo').value = '';
+  document.getElementById('reqDesc').value = '';
+  document.getElementById('dmName').value = '';
+  document.getElementById('dmComment').value = '';
+  dmApproved = false; dmSkipped = false; prevAllDone = false;
+  document.getElementById('approveBtn').classList.remove('approved');
+  document.getElementById('approveBtn').textContent = '✓ Mark as Approved';
+  document.getElementById('dmStatus').textContent = '';
+  document.getElementById('dmStatus').className = 'dm-status';
+  renderModules(); updateStatus();
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+if (sheetUrl) {
+  document.getElementById('setupStatusLabel').textContent = '— ✓ Connected';
+  document.getElementById('setupStatusLabel').style.color = 'var(--green)';
+  document.getElementById('connectedPill').style.display = 'flex';
+}
+renderModules();
+updateStatus();
+</script>
+</body>
+</html>
